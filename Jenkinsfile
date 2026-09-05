@@ -58,10 +58,10 @@ pipeline {
                 bat 'docker build -t forever-admin:latest ./admin'
             }
         }
-
     }
 
     post {
+
         success {
             echo 'CI Pipeline completed successfully! 🚀'
         }
