@@ -1,3 +1,4 @@
+import client from 'prom-client'
 import express from 'express'
 import cors from 'cors'
 import 'dotenv/config'
@@ -12,6 +13,14 @@ import orderRouter from './routes/orderRoute.js'
 
 const app = express()
 const Port = process.env.PORT || 4000
+
+// Prometheus metrics
+client.collectDefaultMetrics()
+
+app.get('/metrics', async (req, res) => {
+    res.set('Content-Type', client.register.contentType)
+    res.end(await client.register.metrics())
+})
 connnectDB()
 connectCloudinary()
 
