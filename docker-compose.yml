@@ -1,5 +1,13 @@
-
 services:
+
+  mongodb:
+    image: mongo:7
+    container_name: forever-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    restart: unless-stopped
 
   backend:
     build: ./backend
@@ -8,8 +16,11 @@ services:
       - "4000:4000"
     env_file:
       - ./backend/.env
+    environment:
+      MONGODB_URI: mongodb://mongodb:27017
+    depends_on:
+      - mongodb
     restart: unless-stopped
-
 
   frontend:
     build:
@@ -23,7 +34,6 @@ services:
       - backend
     restart: unless-stopped
 
-
   admin:
     build:
       context: ./admin
@@ -35,3 +45,6 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+
+volumes:
+  mongo-data:
