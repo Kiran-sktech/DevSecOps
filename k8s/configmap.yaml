@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: forever-config
+  namespace: forever
+data:
+  NODE_ENV: "production"
+  
