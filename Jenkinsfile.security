@@ -1,0 +1,156 @@
+pipeline {
+
+    agent any
+
+    environment {
+        SCANNER_HOME = tool 'SonarScanner' // name must match the tool configured in Manage Jenkins > Tools
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                echo 'Checking out source code...'
+                checkout scm
+            }
+        }
+
+        stage('Install Frontend Dependencies') {
+            steps {
+                dir('frontend') {
+                    sh 'npm ci'
+                }
+            }
+        }
+
+        stage('Build Frontend') {
+            steps {
+                dir('frontend') {
+                    sh 'npm run build'
+                }
+            }
+        }
+
+        stage('Install Admin Dependencies') {
+            steps {
+                dir('admin') {
+                    sh 'npm ci'
+                }
+            }
+        }
+
+        stage('Build Admin') {
+            steps {
+                dir('admin') {
+                    sh 'npm run build'
+                }
+            }
+        }
+
+        stage('Install Backend Dependencies') {
+            steps {
+                dir('backend') {
+                    sh 'npm ci'
+                }
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    sh """
+                        "${SCANNER_HOME}/bin/sonar-scanner" \
+                        -Dsonar.projectKey=devsecops \
+                        -Dsonar.sources=frontend/src,admin/src,backend \
+                        -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/build/**,**/*.test.js,**/*.spec.js
+                    """
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
+        stage('Build Docker Images') {
+            steps {
+                sh 'docker build -t forever-frontend:latest ./frontend'
+                sh 'docker build -t forever-backend:latest ./backend'
+                sh 'docker build -t forever-admin:latest ./admin'
+            }
+        }
+
+        stage('Trivy Scan') {
+            steps {
+                script {
+                    def images = ['forever-backend:latest', 'forever-frontend:latest', 'forever-admin:latest']
+                    def criticalFindings = [:]
+                    def failedImages = []
+
+                    for (image in images) {
+                        def scanResult = sh(
+                            script: "trivy image --severity CRITICAL --exit-code 1 --no-progress ${image} > trivy-critical-${image.replace(':', '_')}.txt 2>&1; echo \$?",
+                            returnStdout: true
+                        ).trim()
+
+                        def reportText = readFile("trivy-critical-${image.replace(':', '_')}.txt")
+
+                        if (scanResult != '0') {
+                            failedImages.add(image)
+                            criticalFindings[image] = reportText
+                        }
+                    }
+
+                    if (!failedImages.isEmpty()) {
+                        echo "===================================================="
+                        echo "❌ CRITICAL VULNERABILITIES FOUND — build blocked"
+                        echo "===================================================="
+                        failedImages.each { image ->
+                            echo "\n--- ${image} ---"
+                            echo criticalFindings[image]
+                        }
+                        echo "===================================================="
+                        error("Fix the CRITICAL vulnerabilities listed above (update the affected package(s) " +
+                              "to the fixed version shown), then push again.")
+                    } else {
+                        echo "✅ No CRITICAL vulnerabilities found in any image."
+                        echo "===================================================="
+                        echo "ℹ️  LOW / MEDIUM / HIGH findings (informational only — not blocking this build)"
+                        echo "===================================================="
+
+                        for (image in images) {
+                            sh "trivy image --severity LOW,MEDIUM,HIGH --no-progress ${image} > trivy-info-${image.replace(':', '_')}.txt 2>&1 || true"
+                            def infoText = readFile("trivy-info-${image.replace(':', '_')}.txt")
+                            echo "\n--- ${image} ---"
+                            echo infoText
+                        }
+                        echo "===================================================="
+                        echo "Review the above when convenient — none of these block the pipeline, " +
+                             "but fixing HIGH-severity items is recommended before production deployment."
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+
+        success {
+            echo '✅ CI Pipeline completed successfully — build, SonarQube gate, and Trivy scan all passed.'
+        }
+
+        failure {
+            echo '❌ CI Pipeline failed. Check the stage above for the specific reason: ' +
+                 'a failed test, a SonarQube quality gate failure, or a CRITICAL Trivy vulnerability. ' +
+                 'See the error message in that stage for exactly what to fix.'
+        }
+
+        always {
+            echo 'Jenkins pipeline execution completed.'
+        }
+    }
+}
