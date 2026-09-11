@@ -64,12 +64,33 @@ pipeline {
 }
 
         stage('Build Docker Images') {
-            steps {
-                bat 'docker build -t forever-frontend:latest ./frontend'
-                bat 'docker build -t forever-backend:latest ./backend'
-                bat 'docker build -t forever-admin:latest ./admin'
-            }
+    steps {
+        bat 'docker build -t forever-frontend:latest ./frontend'
+        bat 'docker build -t forever-backend:latest ./backend'
+        bat 'docker build -t forever-admin:latest ./admin'
+    }
+}
+
+stage('Push Docker Images') {
+    steps {
+        withCredentials([usernamePassword(
+            credentialsId: 'dockerhub-credentials',
+            usernameVariable: 'DOCKERHUB_USERNAME',
+            passwordVariable: 'DOCKERHUB_PASSWORD'
+        )]) {
+
+            bat 'echo %DOCKERHUB_PASSWORD% | docker login -u %DOCKERHUB_USERNAME% --password-stdin'
+
+            bat 'docker tag forever-frontend:latest %DOCKERHUB_USERNAME%/forever-frontend:latest'
+            bat 'docker tag forever-backend:latest %DOCKERHUB_USERNAME%/forever-backend:latest'
+            bat 'docker tag forever-admin:latest %DOCKERHUB_USERNAME%/forever-admin:latest'
+
+            bat 'docker push %DOCKERHUB_USERNAME%/forever-frontend:latest'
+            bat 'docker push %DOCKERHUB_USERNAME%/forever-backend:latest'
+            bat 'docker push %DOCKERHUB_USERNAME%/forever-admin:latest'
         }
+    }
+}
     }
 
     post {
