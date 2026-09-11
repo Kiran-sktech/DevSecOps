@@ -51,6 +51,14 @@ pipeline {
             }
         }
 
+        stage('Run Backend Tests') {
+            steps {
+                dir('backend') {
+                    bat 'set NODE_ENV=test && npm test'
+        }
+    }
+}
+
         stage('Build Docker Images') {
             steps {
                 bat 'docker build -t forever-frontend:latest ./frontend'
