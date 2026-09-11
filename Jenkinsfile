@@ -1,6 +1,9 @@
 pipeline {
 
     agent any
+        environment {
+        NODE_ENV = 'test'
+    }
 
     stages {
 
@@ -51,11 +54,11 @@ pipeline {
             }
         }
 
-      stage('Run Backend Tests') {
+     stage('Run Backend Tests') {
     steps {
         dir('backend') {
             bat 'echo NODE_ENV=%NODE_ENV%'
-            bat 'set NODE_ENV=test && echo NODE_ENV=%NODE_ENV% && npm test'
+            bat 'npm test'
         }
     }
 }
