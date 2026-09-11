@@ -51,10 +51,11 @@ pipeline {
             }
         }
 
-        stage('Run Backend Tests') {
-            steps {
-                dir('backend') {
-                    bat 'set NODE_ENV=test && npm test'
+      stage('Run Backend Tests') {
+    steps {
+        dir('backend') {
+            bat 'echo NODE_ENV=%NODE_ENV%'
+            bat 'set NODE_ENV=test && echo NODE_ENV=%NODE_ENV% && npm test'
         }
     }
 }
