@@ -74,7 +74,7 @@ pipeline {
 stage('Push Docker Images') {
     steps {
         withCredentials([usernamePassword(
-            credentialsId: 'dockerhub-credentials',
+            credentialsId: 'dockerhub-jenkins-push',
             usernameVariable: 'DOCKERHUB_USERNAME',
             passwordVariable: 'DOCKERHUB_PASSWORD'
         )]) {
