@@ -79,7 +79,7 @@ stage('Push Docker Images') {
             passwordVariable: 'DOCKERHUB_PASSWORD'
         )]) {
 
-            bat 'echo %DOCKERHUB_PASSWORD% | docker login -u %DOCKERHUB_USERNAME% --password-stdin'
+            bat 'powershell -NoProfile -Command "$env:DOCKERHUB_PASSWORD | docker login -u $env:DOCKERHUB_USERNAME --password-stdin"'
 
             bat 'docker tag forever-frontend:latest %DOCKERHUB_USERNAME%/forever-frontend:latest'
             bat 'docker tag forever-backend:latest %DOCKERHUB_USERNAME%/forever-backend:latest'
