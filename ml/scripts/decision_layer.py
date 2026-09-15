@@ -3,12 +3,14 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
 
+from kubernetes_actions import restart_backend
+
 
 # =========================
 # Load dataset
 # =========================
 
-df = pd.read_csv("ml/dataset/forever_metrics.csv")
+df = pd.read_csv("../dataset/forever_metrics.csv")
 
 
 # =========================
@@ -73,6 +75,11 @@ def get_risk_level(risk_score):
     else:
         return "HIGH"
 
+
+# =========================
+# Decide action
+# =========================
+
 def get_action(risk_level):
 
     if risk_level == "LOW":
@@ -83,11 +90,15 @@ def get_action(risk_level):
 
     else:
         return "Trigger Recovery"
+
+
 # =========================
 # Display results
 # =========================
 
 print("\n===== RISK SCORE DECISION LAYER =====")
+
+recovery_triggered = False
 
 for i, risk_score in enumerate(risk_scores):
 
@@ -100,3 +111,13 @@ for i, risk_score in enumerate(risk_scores):
         f"Risk Level = {risk_level} | "
         f"Action = {action}"
     )
+
+    # Trigger recovery only once for demonstration
+    if risk_level == "HIGH" and not recovery_triggered:
+
+        print("\n🚨 HIGH RISK DETECTED")
+        print("🔄 Triggering Kubernetes recovery...")
+
+        restart_backend()
+
+        recovery_triggered = True
