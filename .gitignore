@@ -36,3 +36,5 @@ Thumbs.db
 
 # Project archives / backups
 *.zip
+__pycache__/
+*.pyc
